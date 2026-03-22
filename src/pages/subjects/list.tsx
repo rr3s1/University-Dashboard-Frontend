@@ -2,8 +2,7 @@
 import React, {useDeferredValue, useMemo, useState} from 'react'
 import {ListView} from "@/components/refine-ui/views/list-view.tsx";
 import {Breadcrumb} from "@/components/refine-ui/layout/breadcrumb.tsx";
-import { SelectTrigger } from "@radix-ui/react-select";
-import {Select, SelectContent, SelectItem, SelectValue} from "@/components/ui/select";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Search} from "lucide-react";
 import {Input} from "@/components/ui/input.tsx";
 import {DEPARTMENT_OPTIONS} from "@/constants";
