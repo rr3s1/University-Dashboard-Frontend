@@ -50,12 +50,11 @@ function App() {
                                     list: "/",
                                     meta: { label: "Home", icon: <Home /> },
                                 },
-                                // Subjects resource with full CRUD route definitions
+                                // Subjects resource
                                 {
                                     name: "subjects",
                                     list: "/subjects",
                                     create: "/subjects/create",
-                                    show: "/subjects/show/:id",
                                     meta: {
                                         label: "Subjects",
                                         icon: <BookOpen />,

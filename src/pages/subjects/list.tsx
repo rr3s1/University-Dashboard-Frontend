@@ -1,5 +1,5 @@
 // ***** src/pages/subjects/list.tsx *****
-import React, {useMemo, useState} from 'react'
+import React, {useDeferredValue, useMemo, useState} from 'react'
 import {ListView} from "@/components/refine-ui/views/list-view.tsx";
 import {Breadcrumb} from "@/components/refine-ui/layout/breadcrumb.tsx";
 import { SelectTrigger } from "@radix-ui/react-select";
@@ -17,14 +17,17 @@ import {ColumnDef} from "@tanstack/react-table";
 const SubjectsList = () => {
     // State for managing search query input
     const [searchQuery, setSearchQuery] = useState("");
+    const deferredSearchQuery = useDeferredValue(searchQuery);
     // State for managing selected department filter
     const [selectedDepartment, setSelectedDepartment] = useState("all");
 
     // Department filter logic - returns empty array when all is selected
     const departmentFilters = selectedDepartment === "all" ? [] : [{field: "department", operator: "eq" as const, value: selectedDepartment}];
 
-    // Search filter logic - returns empty array when query is empty
-    const searchFilters = searchQuery ? [{field: "name", operator: "contains" as const, value: searchQuery}] : [];
+    // Search filter logic - returns empty array when query is empty (deferred to avoid a request per keystroke)
+    const searchFilters = deferredSearchQuery
+        ? [{field: "name", operator: "contains" as const, value: deferredSearchQuery}]
+        : [];
 
     // useTable hook manages data fetching, sorting, filtering, and pagination
     const subjectTable = useTable<Subject>({
@@ -44,9 +47,7 @@ const SubjectsList = () => {
                 accessorKey: 'name',
                 size: 200,
                 header: () => <p className="column-title">Name</p>,
-                cell: ({getValue}) => <span className='text-foreground'>{getValue<string>()}</span>,
-                // Enables text-based filtering on this column
-                filterFn: 'includesString'
+                cell: ({getValue}) => <span className='text-foreground'>{getValue<string>()}</span>
             },
             {
                 id: 'department',
@@ -61,7 +62,7 @@ const SubjectsList = () => {
                 size: 300,
                 header: () => <p className="column-title">Description</p>,
                 // Truncates long text to two lines maximum
-                cell: ({getValue}) => <span className="truncate line-clamp-2">{getValue<string>()}</span>
+                cell: ({getValue}) => <span className="line-clamp-2 wrap-break-word">{getValue<string>()}</span>
             }
         ], []),
         // Refine Core configuration for data management
@@ -89,7 +90,7 @@ const SubjectsList = () => {
             {/* Breadcrumb displays current navigation path */}
             <Breadcrumb />
             {/* Page title with custom styling class */}
-            <h1 className="page-title">Classes</h1>
+            <h1 className="page-title">Subjects</h1>
             {/* Intro row contains page description */}
             <div className="intro-row">
                 <p>Quick access to essential metrics and management tools.</p>
