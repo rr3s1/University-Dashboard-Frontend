@@ -16,9 +16,10 @@ import { ThemeProvider } from "./components/refine-ui/theme/theme-provider";
 import { dataProvider } from "./providers/data";
 import Dashboard from "@/pages/dashboard.tsx";
 import { Layout } from "./components/refine-ui/layout/layout";
-import { BookOpen, Home } from "lucide-react";
+import { BookOpen, Building2, Home } from "lucide-react";
 import SubjectsList from "@/pages/subjects/list.tsx";
 import SubjectsCreate from "@/pages/subjects/create.tsx";
+import DepartmentsList from "@/pages/departments/list.tsx";
 
 function App() {
     return (
@@ -60,6 +61,14 @@ function App() {
                                         icon: <BookOpen />,
                                     },
                                 },
+                                {
+                                    name: "departments",
+                                    list: "/departments",
+                                    meta: {
+                                        label: "Departments",
+                                        icon: <Building2 />,
+                                    },
+                                },
                             ]}
                         >
                             <Routes>
@@ -83,6 +92,10 @@ function App() {
                                         <Route index element={<SubjectsList />} />
                                         <Route path="create" element={<SubjectsCreate />} />
                                     </Route>
+                                    <Route
+                                        path="departments"
+                                        element={<DepartmentsList />}
+                                    />
                                 </Route>
                             </Routes>
                             {/* Notification toaster displays system messages */}

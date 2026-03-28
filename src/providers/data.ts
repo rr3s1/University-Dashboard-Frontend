@@ -1,135 +1,83 @@
-import {
-  BaseRecord,
-  CreateParams,
-  DataProvider,
-  DeleteOneParams,
-  GetListParams,
-  GetListResponse,
-  GetOneParams,
-  UpdateParams,
-} from "@refinedev/core";
+import type { CrudFilter, GetListParams } from "@refinedev/core";
+import { createDataProvider, CreateDataProviderOptions } from "@refinedev/rest";
 
-export interface Subject extends BaseRecord {
-  id: string;
-  code: string;
-  name: string;
-  department: string;
-  description: string;
+import { ListResponse } from "@/types";
+import { BACKEND_BASE_URL } from "@/constants";
+
+/** Flatten Refine filters (including nested and/or) for simple field matching. */
+function collectFieldFilters(filters: CrudFilter[] | undefined) {
+  const out: Array<{ field: string; operator: string; value: unknown }> = [];
+  const walk = (items: CrudFilter[]) => {
+    for (const f of items) {
+      if ("field" in f && f.field) {
+        out.push({
+          field: String(f.field),
+          operator: String(f.operator),
+          value: f.value,
+        });
+      } else if ("and" in f && Array.isArray(f.and)) {
+        walk(f.and);
+      } else if ("or" in f && Array.isArray(f.or)) {
+        walk(f.or);
+      }
+    }
+  };
+  if (filters?.length) walk(filters);
+  return out;
 }
 
-export const mockSubjects: Subject[] = [
-  {
-    id: "subj-cs-201",
-    code: "CS 201",
-    name: "Data Structures and Algorithms",
-    department: "Computer Science",
-    description:
-      "Core study of lists, trees, graphs, hashing, and algorithmic complexity with hands-on implementation in a mainstream language.",
-  },
-  {
-    id: "subj-math-301",
-    code: "MATH 301",
-    name: "Linear Algebra",
-    department: "Mathematics",
-    description:
-      "Vector spaces, matrices, eigenvalues, and orthogonality with applications across science and engineering.",
-  },
-  {
-    id: "subj-phys-210",
-    code: "PHYS 210",
-    name: "Electricity and Magnetism",
-    department: "Physics",
-    description:
-      "Electrostatics, circuits, magnetic fields, and Maxwell's equations with lab work on measurement and modeling.",
-  },
-];
-
-/** Mutable in-memory store for mock CRUD; seeded from {@link mockSubjects}. */
-let subjectsStore: Subject[] = mockSubjects.map((s) => ({...s}));
-
-function newSubjectId(): string {
-  return `subj-${crypto.randomUUID()}`;
+/** Refine column fields like `department.name` map to backend root fields (e.g. `department`). */
+function rootField(field: string): string {
+  const dot = field.indexOf(".");
+  return dot === -1 ? field : field.slice(0, dot);
 }
 
-export const dataProvider: DataProvider = {
-  getList: async <TData extends BaseRecord = BaseRecord>({
-    resource,
-  }: GetListParams): Promise<GetListResponse<TData>> => {
-    if (resource !== "subjects") {
-      return {
-        data: [],
-        total: 0,
-      };
+/** Express API expects `page`, `limit`, `search`, `department`, `sort`, `order`. */
+async function buildBackendListQuery(params: GetListParams) {
+  const q: Record<string, string | number> = {};
+  const { pagination } = params;
+  if (pagination) {
+    q.page = pagination.currentPage ?? 1;
+    q.limit = pagination.pageSize ?? 10;
+  }
+  for (const { field, operator, value } of collectFieldFilters(params.filters)) {
+    if (value === undefined || value === null || value === "") continue;
+    const baseField = rootField(field);
+    if (baseField === "department" && operator === "eq") {
+      q.department = String(value);
     }
-    return {
-      data: subjectsStore as unknown as TData[],
-      total: subjectsStore.length,
-    };
+    if (baseField === "name" && operator === "contains") {
+      q.search = String(value);
+    }
+  }
+  const sorters = params.sorters ?? [];
+  for (const sorter of sorters) {
+    if (!sorter?.field) continue;
+    q.sort = rootField(String(sorter.field));
+    q.order = sorter.order === "asc" ? "asc" : "desc";
+    break;
+  }
+  return q;
+}
+
+const options: CreateDataProviderOptions = {
+  getList: {
+    getEndpoint: ({ resource }) => resource,
+    buildQueryParams: buildBackendListQuery,
+
+    mapResponse: async (response) => {
+      const payload: ListResponse = await response.json();
+      return payload.data ?? [];
+    },
+
+    getTotalCount: async (response) => {
+      const payload: ListResponse = await response.json();
+      return payload.pagination?.total ?? payload.data?.length ?? 0;
+    },
   },
-  getOne: async <TData extends BaseRecord = BaseRecord>({
-    resource,
-    id,
-  }: GetOneParams) => {
-    if (resource !== "subjects") {
-      throw new Error(`Mock data provider: resource "${resource}" is not supported`);
-    }
-    const sid = String(id);
-    const row = subjectsStore.find((s) => s.id === sid);
-    if (!row) {
-      throw new Error(`Mock data provider: subject "${sid}" not found`);
-    }
-    return {data: row as unknown as TData};
-  },
-  create: async <TData extends BaseRecord = BaseRecord, TVariables = {}>({
-    resource,
-    variables,
-  }: CreateParams<TVariables>) => {
-    if (resource !== "subjects") {
-      throw new Error(`Mock data provider: resource "${resource}" is not supported`);
-    }
-    const v = variables as Partial<Subject>;
-    const created: Subject = {
-      id: newSubjectId(),
-      code: v.code ?? "",
-      name: v.name ?? "",
-      department: v.department ?? "",
-      description: v.description ?? "",
-    };
-    subjectsStore = [...subjectsStore, created];
-    return {data: created as unknown as TData};
-  },
-  update: async <TData extends BaseRecord = BaseRecord, TVariables = {}>({
-    resource,
-    id,
-    variables,
-  }: UpdateParams<TVariables>) => {
-    if (resource !== "subjects") {
-      throw new Error(`Mock data provider: resource "${resource}" is not supported`);
-    }
-    const sid = String(id);
-    const idx = subjectsStore.findIndex((s) => s.id === sid);
-    if (idx === -1) {
-      throw new Error(`Mock data provider: subject "${sid}" not found`);
-    }
-    const patch = variables as Partial<Subject>;
-    const updated: Subject = {...subjectsStore[idx], ...patch, id: subjectsStore[idx].id};
-    subjectsStore = subjectsStore.map((s, i) => (i === idx ? updated : s));
-    return {data: updated as unknown as TData};
-  },
-  deleteOne: async <TData extends BaseRecord = BaseRecord, TVariables = {}>({
-    resource,
-    id,
-  }: DeleteOneParams<TVariables>) => {
-    if (resource !== "subjects") {
-      throw new Error(`Mock data provider: resource "${resource}" is not supported`);
-    }
-    const sid = String(id);
-    const idx = subjectsStore.findIndex((s) => s.id === sid);
-    if (idx === -1) {
-      throw new Error(`Mock data provider: subject "${sid}" not found`);
-    }
-    subjectsStore = subjectsStore.filter((s) => s.id !== sid);
-    return {data: {id: sid} as TData};
-  },
-  getApiUrl: () => "",
+
 };
+
+const { dataProvider } = createDataProvider(BACKEND_BASE_URL, options);
+
+export { dataProvider };
