@@ -68,11 +68,14 @@ export const CLOUDINARY_UPLOAD_URL = import.meta.env.VITE_CLOUDINARY_UPLOAD_URL 
 export const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ?? "";
 export const BACKEND_BASE_URL = getEnvVar("VITE_BACKEND_BASE_URL");
 
-export const BASE_URL = getEnvVar("VITE_API_URL");
-export const ACCESS_TOKEN_KEY = getEnvVar("VITE_ACCESS_TOKEN_KEY");
-export const REFRESH_TOKEN_KEY = getEnvVar("VITE_REFRESH_TOKEN_KEY");
+/** Optional until auth is wired; avoids crashing the app when only the REST backend URL is set. */
+export const BASE_URL = import.meta.env.VITE_API_URL ?? "";
+export const ACCESS_TOKEN_KEY = import.meta.env.VITE_ACCESS_TOKEN_KEY ?? "";
+export const REFRESH_TOKEN_KEY = import.meta.env.VITE_REFRESH_TOKEN_KEY ?? "";
 
-export const REFRESH_TOKEN_URL = `${BASE_URL}/refresh-token`;
+export const REFRESH_TOKEN_URL = BASE_URL
+    ? `${BASE_URL}/refresh-token`
+    : "";
 
 export const CLOUDINARY_UPLOAD_PRESET =
     import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET ?? "";
