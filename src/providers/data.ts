@@ -26,7 +26,13 @@ function collectFieldFilters(filters: CrudFilter[] | undefined) {
   return out;
 }
 
-/** Express API expects `page`, `limit`, `search`, `department` — not Refine's default nested query. */
+/** Refine column fields like `department.name` map to backend root fields (e.g. `department`). */
+function rootField(field: string): string {
+  const dot = field.indexOf(".");
+  return dot === -1 ? field : field.slice(0, dot);
+}
+
+/** Express API expects `page`, `limit`, `search`, `department`, `sort`, `order`. */
 async function buildBackendListQuery(params: GetListParams) {
   const q: Record<string, string | number> = {};
   const { pagination } = params;
@@ -36,12 +42,20 @@ async function buildBackendListQuery(params: GetListParams) {
   }
   for (const { field, operator, value } of collectFieldFilters(params.filters)) {
     if (value === undefined || value === null || value === "") continue;
-    if (field === "department" && operator === "eq") {
+    const baseField = rootField(field);
+    if (baseField === "department" && operator === "eq") {
       q.department = String(value);
     }
-    if (field === "name" && operator === "contains") {
+    if (baseField === "name" && operator === "contains") {
       q.search = String(value);
     }
+  }
+  const sorters = params.sorters ?? [];
+  for (const sorter of sorters) {
+    if (!sorter?.field) continue;
+    q.sort = rootField(String(sorter.field));
+    q.order = sorter.order === "asc" ? "asc" : "desc";
+    break;
   }
   return q;
 }

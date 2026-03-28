@@ -50,10 +50,12 @@ const SubjectsList = () => {
             },
             {
                 id: 'department',
-                accessorKey: 'department.name',
+                accessorFn: (row) => row.department?.name,
                 size: 150,
                 header: () => <p className="column-title">Department</p>,
-                cell: ({getValue}) => <Badge variant="secondary">{getValue<string>()}</Badge>
+                cell: ({getValue}) => (
+                    <Badge variant="secondary">{getValue<string | undefined>() ?? 'Unassigned'}</Badge>
+                )
             },
             {
                 id: 'description',
