@@ -2,6 +2,7 @@
 import { Refine } from "@refinedev/core";
 import { DevtoolsPanel, DevtoolsProvider } from "@refinedev/devtools";
 import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
+import { GraduationCap } from "lucide-react";
 
 // Router provider enables React Router integration with Refine
 import routerProvider, {
@@ -20,6 +21,8 @@ import { BookOpen, Building2, Home } from "lucide-react";
 import SubjectsList from "@/pages/subjects/list.tsx";
 import SubjectsCreate from "@/pages/subjects/create.tsx";
 import DepartmentsList from "@/pages/departments/list.tsx";
+import ClassesList from "@/pages/classes/list.tsx";
+import ClassesCreate from "@/pages/classes/create.tsx";
 
 function App() {
     return (
@@ -69,6 +72,15 @@ function App() {
                                         icon: <Building2 />,
                                     },
                                 },
+                                {
+                                    name: "classes",
+                                    list: "/classes",
+                                    create: "/classes/create",
+                                    meta: {
+                                        label: "Classes",
+                                        icon: <GraduationCap />,
+                                    },
+                                },
                             ]}
                         >
                             <Routes>
@@ -88,10 +100,14 @@ function App() {
                                     <Route path="/" element={<Dashboard />} />
 
                                     {/* Subjects route group nested within Layout */}
-                                    <Route path="subjects">
-                                        <Route index element={<SubjectsList />} />
-                                        <Route path="create" element={<SubjectsCreate />} />
-                                    </Route>
+                                        <Route path="subjects">
+                                            <Route index element={<SubjectsList />} />
+                                            <Route path="create" element={<SubjectsCreate />} />
+                                        </Route>
+                                        <Route path="classes">
+                                            <Route index element={<ClassesList />} />
+                                            <Route path="create" element={<ClassesCreate />} />
+                                        </Route>
                                     <Route
                                         path="departments"
                                         element={<DepartmentsList />}
