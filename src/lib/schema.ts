@@ -22,11 +22,45 @@ export const subjectSchema = z.object({
     .min(2, "Subject department must be at least 2 characters"),
 });
 
-const scheduleSchema = z.object({
-  day: z.string().min(1, "Day is required"),
-  startTime: z.string().min(1, "Start time is required"),
-  endTime: z.string().min(1, "End time is required"),
-});
+function timeStringToMinutes(value: string): number | null {
+  const trimmed = value.trim();
+  const hm = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(trimmed);
+  if (hm) {
+    const h = Number(hm[1]);
+    const m = Number(hm[2]);
+    if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+      return h * 60 + m;
+    }
+    return null;
+  }
+  const parsed = Date.parse(trimmed);
+  if (!Number.isNaN(parsed)) {
+    const d = new Date(parsed);
+    return d.getHours() * 60 + d.getMinutes();
+  }
+  return null;
+}
+
+const scheduleSchema = z
+  .object({
+    day: z.string().min(1, "Day is required"),
+    startTime: z.string().min(1, "Start time is required"),
+    endTime: z.string().min(1, "End time is required"),
+  })
+  .superRefine((data, ctx) => {
+    const startM = timeStringToMinutes(data.startTime);
+    const endM = timeStringToMinutes(data.endTime);
+    if (startM === null || endM === null) {
+      return;
+    }
+    if (endM <= startM) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End time must be after start time",
+        path: ["endTime"],
+      });
+    }
+  });
 
 export const classSchema = z.object({
   name: z
@@ -48,6 +82,7 @@ export const classSchema = z.object({
       required_error: "Capacity is required",
       invalid_type_error: "Capacity is required",
     })
+    .int({ message: "Capacity must be a whole number" })
     .min(1, "Capacity must be at least 1"),
   status: z.enum(["active", "inactive"]),
   bannerUrl: z
