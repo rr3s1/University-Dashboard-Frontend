@@ -1,7 +1,7 @@
 import {CreateView} from "@/components/refine-ui/views/create-view.tsx";
 import {Breadcrumb} from "@/components/refine-ui/layout/breadcrumb.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import {useBack} from "@refinedev/core";
+import {useBack, useCreate, useGo} from "@refinedev/core";
 import {Separator} from "@/components/ui/separator.tsx";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.tsx"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -26,6 +26,8 @@ import {Loader2} from "lucide-react";
 
 const Create = () => {
     const back = useBack();
+    const go = useGo();
+    const { mutateAsync: createClass } = useCreate();
 
     const form = useForm<z.infer<typeof classSchema>>({
         resolver: zodResolver(classSchema),
@@ -40,7 +42,11 @@ const Create = () => {
 
     const onSubmit = async (values: z.infer<typeof classSchema>) => {
         try {
-            console.log(values);
+            await createClass({
+                resource: "classes",
+                values,
+            });
+            go({ to: "/classes", type: "replace" });
         } catch (error) {
             console.error("Error creating class:", error);
         }
