@@ -6,6 +6,7 @@ import type { Column } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { DataTablePagination } from "@/components/refine-ui/data-table/data-table-pagination";
 import {
@@ -36,6 +37,35 @@ export function DataTable<TData extends BaseRecord>({
       setPageSize,
     },
   } = table;
+
+  // Refine's built-in list error toast is disabled on table pages; we show Sonner here.
+  // Depend on `errorUpdateCount` so every failed attempt (retries, refetches, remounts) can surface,
+  // not only when `error.message` or `errorUpdatedAt` appears to change from React's perspective.
+  useEffect(() => {
+    if (!tableQuery.isError || tableQuery.error == null) return;
+    const raw = tableQuery.error as HttpError | Error;
+    const message =
+      raw instanceof Error
+        ? raw.message
+        : typeof raw?.message === "string"
+          ? raw.message
+          : "Request failed.";
+    const code =
+      raw instanceof Error
+        ? "unknown"
+        : (raw as HttpError).statusCode ?? "unknown";
+    toast.error(`Error (status code: ${code})`, {
+      id: `refine-list-${tableQuery.errorUpdatedAt}-${tableQuery.errorUpdateCount}`,
+      description: message,
+      richColors: true,
+      duration: 10_000,
+    });
+  }, [
+    tableQuery.isError,
+    tableQuery.error,
+    tableQuery.errorUpdatedAt,
+    tableQuery.errorUpdateCount,
+  ]);
 
   const columns = getAllColumns();
   const leafColumns = table.reactTable.getAllLeafColumns();

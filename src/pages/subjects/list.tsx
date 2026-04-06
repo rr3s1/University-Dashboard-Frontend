@@ -20,13 +20,25 @@ const SubjectsList = () => {
     // State for managing selected department filter
     const [selectedDepartment, setSelectedDepartment] = useState("all");
 
-    // Department filter logic - returns empty array when all is selected
-    const departmentFilters = selectedDepartment === "all" ? [] : [{field: "department", operator: "eq" as const, value: selectedDepartment}];
-
-    // Search filter logic - returns empty array when query is empty (deferred to avoid a request per keystroke)
-    const searchFilters = deferredSearchQuery
-        ? [{field: "name", operator: "contains" as const, value: deferredSearchQuery}]
-        : [];
+    // Memoize so Refine/React Query list keys stay stable across renders (new [] each render would churn the query).
+    const departmentFilters = useMemo(
+        () =>
+            selectedDepartment === "all"
+                ? []
+                : [{ field: "department", operator: "eq" as const, value: selectedDepartment }],
+        [selectedDepartment],
+    );
+    const searchFilters = useMemo(
+        () =>
+            deferredSearchQuery
+                ? [{ field: "name", operator: "contains" as const, value: deferredSearchQuery }]
+                : [],
+        [deferredSearchQuery],
+    );
+    const permanentFilters = useMemo(
+        () => [...departmentFilters, ...searchFilters],
+        [departmentFilters, searchFilters],
+    );
 
     // useTable hook manages data fetching, sorting, filtering, and pagination
     const subjectTable = useTable<Subject>({
@@ -68,13 +80,18 @@ const SubjectsList = () => {
         ], []),
         // Refine Core configuration for data management
         refineCoreProps: {
+            // DataTable shows errors keyed by fetch attempt; disable duplicate Refine useList toast
+            errorNotification: false,
             // Resource name must match App.tsx resource definition
             resource: "subjects",
             // Pagination configuration for server-side data fetching
             pagination: {pageSize: 10, mode: 'server'},
             // Permanent filters apply to all data requests
             filters: {
-                permanent: [...departmentFilters, ...searchFilters]
+                permanent: permanentFilters,
+            },
+            queryOptions: {
+                retry: false,
             },
             // Initial sorting configuration
             sorters: {

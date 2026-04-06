@@ -44,6 +44,7 @@ const DepartmentsList = () => {
             [],
         ),
         refineCoreProps: {
+            errorNotification: false,
             resource: "departments",
             pagination: { pageSize: 10, mode: "server" },
             sorters: { initial: [{ field: "id", order: "desc" }] },
