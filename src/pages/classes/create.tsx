@@ -1,12 +1,13 @@
 import {CreateView} from "@/components/refine-ui/views/create-view.tsx";
 import {Breadcrumb} from "@/components/refine-ui/layout/breadcrumb.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import {useBack, useCreate, useGo} from "@refinedev/core";
+import type { BaseRecord, HttpError } from "@refinedev/core";
+import { useBack } from "@refinedev/core";
+import { useForm } from "@refinedev/react-hook-form";
 import {Separator} from "@/components/ui/separator.tsx";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.tsx"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import {classSchema} from "@/lib/schema.ts";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { classSchema } from "@/lib/schema.ts";
 import * as z from "zod";
 import UploadWidget from "@/components/uploadWidget.tsx";
 import type { UploadWidgetValue } from "@/types";
@@ -22,18 +23,24 @@ import { Input } from "@/components/ui/input"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {Textarea} from "@/components/ui/textarea.tsx";
 import {Loader2} from "lucide-react";
-
+import { useList } from "@refinedev/core";
+import type { Subject, User } from "@/types";
 
 const Create = () => {
     const back = useBack();
-    const go = useGo();
-    const { mutateAsync: createClass } = useCreate();
 
-    const form = useForm<z.infer<typeof classSchema>>({
+    type ClassFormValues = z.infer<typeof classSchema>;
+
+    const form = useForm<BaseRecord, HttpError, ClassFormValues>({
+        refineCoreProps: {
+            resource: "classes",
+            action: "create",
+        },
         resolver: zodResolver(classSchema),
     });
 
     const {
+        refineCore: { onFinish},
         handleSubmit,
         formState: { isSubmitting },
         control,
@@ -42,39 +49,39 @@ const Create = () => {
 
     const onSubmit = async (values: z.infer<typeof classSchema>) => {
         try {
-            await createClass({
-                resource: "classes",
-                values,
-            });
-            go({ to: "/classes", type: "replace" });
+            await onFinish(values);
+            // go({ to: "/classes", type: "replace" });
         } catch (error) {
             console.error("Error creating class:", error);
         }
     };
+  
+     const {query: subjectsQuery} = useList<Subject>({
+resource: 'subjects',
+pagination: { 
+    pageSize: 100,
+}
+     })
 
-    const teachers = [
-        {
-            id: 1,
-            name: "John Doe",
+     const { query: teachersQuery } = useList<User>({
+        resource: "users",
+        filters: [
+          {
+            field: "role",
+            operator: "eq",
+            value: "teacher",
+          },
+        ],
+        pagination: {
+          pageSize: 100,
         },
-        {
-            id: 2,
-            name: "Jane Doe",
-        },
-    ];
+      });
 
-    const subjects = [
-        {
-            id: 1,
-            name: "Math",
-            code: "MATH",
-        },
-        {
-            id: 2,
-            name: "English",
-            code: "ENG",
-        },
-    ];
+      const subjects = subjectsQuery.data?.data || [];
+      const subjectsLoading = subjectsQuery.isLoading;
+
+      const teachers = teachersQuery.data?.data || [];
+      const teachersLoading = teachersQuery.isLoading;
 
     return (
         <CreateView className="class-view">
@@ -174,6 +181,7 @@ const Create = () => {
                                                         field.onChange(Number(value))
                                                     }
                                                     value={field.value?.toString()}
+                                                    disabled={subjectsLoading}
                                                 >
                                                     <FormControl>
                                                         <SelectTrigger className="w-full">
@@ -207,6 +215,7 @@ const Create = () => {
                                                 <Select
                                                     onValueChange={field.onChange}
                                                     value={field.value}
+                                                    disabled={teachersLoading}
                                                 >
                                                     <FormControl>
                                                         <SelectTrigger className="w-full">
